@@ -7,9 +7,29 @@ import { resolve } from 'path'
 export default defineConfig({
   plugins: [
     vue(),
-    electron({
-      entry: 'electron/main.ts',
-    }),
+    electron([
+      {
+        entry: 'electron/main.ts',
+        vite: {
+          build: {
+            outDir: 'dist-electron',
+            watch: {}
+          }
+        }
+      },
+      {
+        entry: 'electron/preload.ts',
+        onstart(options) {
+          options.reload()
+        },
+        vite: {
+          build: {
+            outDir: 'dist-electron',
+            watch: {}
+          }
+        }
+      }
+    ]),
     renderer()
   ],
   resolve: {

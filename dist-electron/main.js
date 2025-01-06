@@ -30,12 +30,15 @@ function createWindow() {
     height: 800,
     webPreferences: {
       preload: path__namespace.join(__dirname, "preload.js"),
-      nodeIntegration: false,
-      contextIsolation: true
+      nodeIntegration: true,
+      contextIsolation: true,
+      sandbox: false
     }
   });
+  console.log("Preload path:", path__namespace.join(__dirname, "preload.js"));
   if (process.env.VITE_DEV_SERVER_URL) {
     mainWindow.loadURL(process.env.VITE_DEV_SERVER_URL);
+    mainWindow.webContents.openDevTools();
   } else {
     mainWindow.loadFile("dist/index.html");
   }
@@ -51,43 +54,41 @@ async function getGitCommits(projectPath, author, since) {
   return stdout.split("\n").map((line) => line.replace(/^(feat|fix|refactor|style|perf|test|docs|chore|build|ci|revert|merge)(\([^)]*\))?:\s*/, "")).filter(Boolean);
 }
 electron.ipcMain.handle("generate-report", async (event, config) => {
-  const { projects, dateRange } = config;
-  const author = await execAsync("git config user.name");
-  const since = dateRange[0].toISOString();
-  const reportData = await Promise.all(
-    projects.filter((p) => p.enabled).map(async (project) => {
-      const commits = await getGitCommits(project.path, author.stdout.trim(), since);
-      return {
-        name: project.name,
-        commits
-      };
-    })
-  );
-  const reportContent = generateMarkdown(reportData);
-  const fileName = `task - ${(/* @__PURE__ */ new Date()).toISOString().slice(0, 10)}.md`;
-  fs__namespace.writeFileSync(fileName, reportContent);
-  return { success: true, fileName };
+  const { path: path2, startDate, endDate } = config;
+  try {
+    const author = await execAsync("git config user.name");
+    const commits = await getGitCommits(path2, author.stdout.trim(), startDate);
+    return { commits };
+  } catch (error) {
+    console.error(`Failed to get commits for ${path2}:`, error);
+    return { commits: [] };
+  }
 });
-function generateMarkdown(data) {
-  let content = "### 本周工作总结\n\n";
-  data.forEach((project) => {
-    content += `#### ${project.name}
-
-`;
-    project.commits.forEach((commit, index) => {
-      content += `${index + 1}. ${commit}
-`;
-    });
-    content += "\n";
+electron.ipcMain.handle("save-report", async (event, { content, fileName }) => {
+  try {
+    fs__namespace.writeFileSync(fileName, content);
+    return { success: true, fileName };
+  } catch (error) {
+    console.error("Failed to save report:", error);
+    throw error;
+  }
+});
+electron.ipcMain.handle("dialog:openDirectory", async () => {
+  const { canceled, filePaths } = await electron.dialog.showOpenDialog({
+    properties: ["openDirectory"]
   });
-  content += `### 下周工作计划
-
-#### 智联
-
-1. 继续优化功能
-2. 处理测试反馈问题
-
----
-`;
-  return content;
-}
+  if (canceled) {
+    return "";
+  }
+  return filePaths[0];
+});
+electron.app.on("window-all-closed", () => {
+  if (process.platform !== "darwin") {
+    electron.app.quit();
+  }
+});
+electron.app.on("activate", () => {
+  if (mainWindow === null) {
+    createWindow();
+  }
+});

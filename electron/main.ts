@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain } from 'electron'
+import { app, BrowserWindow, ipcMain, dialog } from 'electron'
 import { exec } from 'child_process'
 import { promisify } from 'util'
 import * as path from 'path'
@@ -14,13 +14,17 @@ function createWindow() {
     height: 800,
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
-      nodeIntegration: false,
-      contextIsolation: true
+      nodeIntegration: true,
+      contextIsolation: true,
+      sandbox: false
     }
   })
 
+  console.log('Preload path:', path.join(__dirname, 'preload.js'))
+
   if (process.env.VITE_DEV_SERVER_URL) {
     mainWindow.loadURL(process.env.VITE_DEV_SERVER_URL)
+    mainWindow.webContents.openDevTools()
   } else {
     mainWindow.loadFile('dist/index.html')
   }
@@ -41,41 +45,45 @@ async function getGitCommits(projectPath: string, author: string, since: string)
 }
 
 ipcMain.handle('generate-report', async (event, config) => {
-  const { projects, dateRange } = config
-  const author = await execAsync('git config user.name')
-  const since = dateRange[0].toISOString()
-  
-  const reportData = await Promise.all(
-    projects
-      .filter(p => p.enabled)
-      .map(async project => {
-        const commits = await getGitCommits(project.path, author.stdout.trim(), since)
-        return {
-          name: project.name,
-          commits
-        }
-      })
-  )
-
-  const reportContent = generateMarkdown(reportData)
-  const fileName = `task - ${new Date().toISOString().slice(0, 10)}.md`
-  
-  fs.writeFileSync(fileName, reportContent)
-  return { success: true, fileName }
+  const { path, startDate, endDate } = config
+  try {
+    const author = await execAsync('git config user.name')
+    const commits = await getGitCommits(path, author.stdout.trim(), startDate)
+    return { commits }
+  } catch (error) {
+    console.error(`Failed to get commits for ${path}:`, error)
+    return { commits: [] }
+  }
 })
 
-function generateMarkdown(data) {
-  let content = '### 本周工作总结\n\n'
-  
-  data.forEach(project => {
-    content += `#### ${project.name}\n\n`
-    project.commits.forEach((commit, index) => {
-      content += `${index + 1}. ${commit}\n`
-    })
-    content += '\n'
+ipcMain.handle('save-report', async (event, { content, fileName }) => {
+  try {
+    fs.writeFileSync(fileName, content)
+    return { success: true, fileName }
+  } catch (error) {
+    console.error('Failed to save report:', error)
+    throw error
+  }
+})
+
+ipcMain.handle('dialog:openDirectory', async () => {
+  const { canceled, filePaths } = await dialog.showOpenDialog({
+    properties: ['openDirectory']
   })
-  
-  content += `### 下周工作计划\n\n#### 智联\n\n1. 继续优化功能\n2. 处理测试反馈问题\n\n---\n`
-  
-  return content
-} 
+  if (canceled) {
+    return ''
+  }
+  return filePaths[0]
+})
+
+app.on('window-all-closed', () => {
+  if (process.platform !== 'darwin') {
+    app.quit()
+  }
+})
+
+app.on('activate', () => {
+  if (mainWindow === null) {
+    createWindow()
+  }
+}) 
