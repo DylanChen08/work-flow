@@ -8,9 +8,12 @@ importers:
 
   .:
     dependencies:
+      '@element-plus/icons-vue':
+        specifier: ^2.1.0
+        version: 2.3.1(vue@3.5.13(typescript@5.7.2))
       element-plus:
         specifier: ^2.4.0
-        version: 2.9.1(vue@3.5.13(typescript@5.7.2))
+        version: 2.9.2(vue@3.5.13(typescript@5.7.2))
       marked:
         specifier: ^9.0.0
         version: 9.1.6
@@ -38,7 +41,10 @@ importers:
         version: 4.5.5(@types/node@20.17.11)
       vite-plugin-electron:
         specifier: ^0.15.0
-        version: 0.15.6
+        version: 0.15.6(vite-plugin-electron-renderer@0.14.6)
+      vite-plugin-electron-renderer:
+        specifier: ^0.14.5
+        version: 0.14.6
       vue-tsc:
         specifier: ^1.8.0
         version: 1.8.27(typescript@5.7.2)
@@ -293,8 +299,8 @@ packages:
   '@types/lodash-es@4.17.12':
     resolution: {integrity: sha512-0NgftHUcV4v34VhXm8QBSftKVXtbkBG3ViCjs6+eJ5a6y6Mi/jiFGPc1sC7QK+9BFhWrURE3EOggmWaSxL9OzQ==}
 
-  '@types/lodash@4.17.13':
-    resolution: {integrity: sha512-lfx+dftrEZcdBPczf9d0Qv0x+j/rfNCMuC6OcfXmO8gkfeNAY88PgKUbvG56whcN23gc27yenwF6oJZXGFpYxg==}
+  '@types/lodash@4.17.14':
+    resolution: {integrity: sha512-jsxagdikDiDBeIRaPYtArcT8my4tN1og7MtMRquFT3XNA6axxyHDRUemqDz/taRDdOUn0GnGHRCuff4q48sW9A==}
 
   '@types/ms@0.7.34':
     resolution: {integrity: sha512-nG96G3Wp6acyAgJqGasjODb+acrI7KltPiRxzHPXnP3NgI28bpQDRv53olbqGXbfcgF5aiiHmO3xpwEpS5Ld9g==}
@@ -681,8 +687,8 @@ packages:
     engines: {node: '>= 12.20.55'}
     hasBin: true
 
-  element-plus@2.9.1:
-    resolution: {integrity: sha512-9Agqf/jt4Ugk7EZ6C5LME71sgkvauPCsnvJN12Xid2XVobjufxMGpRE4L7pS4luJMOmFAH3J0NgYEGZT5r+NDg==}
+  element-plus@2.9.2:
+    resolution: {integrity: sha512-HS+Cc5mmy70DixJuoN3cMxPPoNWXkjHzUw2PcGmysk6NHQzzUtwi2Vc+dlmbmRxj3eNqgC1xpPQV5Nf9uDtQRg==}
     peerDependencies:
       vue: ^3.2.0
 
@@ -1337,6 +1343,9 @@ packages:
     resolution: {integrity: sha512-veufcmxri4e3XSrT0xwfUR7kguIkaxBeosDg00yDWhk49wdwkSUrvvsm7nc75e1PUyvIeZj6nS8VQRYz2/S4Xg==}
     engines: {node: '>=0.6.0'}
 
+  vite-plugin-electron-renderer@0.14.6:
+    resolution: {integrity: sha512-oqkWFa7kQIkvHXG7+Mnl1RTroA4sP0yesKatmAy0gjZC4VwUqlvF9IvOpHd1fpLWsqYX/eZlVxlhULNtaQ78Jw==}
+
   vite-plugin-electron@0.15.6:
     resolution: {integrity: sha512-sbjzNiH8N6Was67oIUgglW6tefahkiCTItM3MsdOAQ0xhUMxizeQMF9DhSvEBwvLvUGKYboIdIYskSchV7Akrg==}
     peerDependencies:
@@ -1662,9 +1671,9 @@ snapshots:
 
   '@types/lodash-es@4.17.12':
     dependencies:
-      '@types/lodash': 4.17.13
+      '@types/lodash': 4.17.14
 
-  '@types/lodash@4.17.13': {}
+  '@types/lodash@4.17.14': {}
 
   '@types/ms@0.7.34': {}
 
@@ -2202,13 +2211,13 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  element-plus@2.9.1(vue@3.5.13(typescript@5.7.2)):
+  element-plus@2.9.2(vue@3.5.13(typescript@5.7.2)):
     dependencies:
       '@ctrl/tinycolor': 3.6.1
       '@element-plus/icons-vue': 2.3.1(vue@3.5.13(typescript@5.7.2))
       '@floating-ui/dom': 1.6.12
       '@popperjs/core': '@sxzz/popperjs-es@2.11.7'
-      '@types/lodash': 4.17.13
+      '@types/lodash': 4.17.14
       '@types/lodash-es': 4.17.12
       '@vueuse/core': 9.13.0(vue@3.5.13(typescript@5.7.2))
       async-validator: 4.2.5
@@ -2883,7 +2892,11 @@ snapshots:
       extsprintf: 1.4.1
     optional: true
 
-  vite-plugin-electron@0.15.6: {}
+  vite-plugin-electron-renderer@0.14.6: {}
+
+  vite-plugin-electron@0.15.6(vite-plugin-electron-renderer@0.14.6):
+    optionalDependencies:
+      vite-plugin-electron-renderer: 0.14.6
 
   vite@4.5.5(@types/node@20.17.11):
     dependencies:
