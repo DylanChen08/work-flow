@@ -71,7 +71,10 @@ const projects = ref<Project[]>([
   }
 ])
 
-const dateRange = ref<[Date, Date]>([new Date(), new Date()])
+const dateRange = ref<[Date, Date]>([
+  new Date(new Date().setDate(new Date().getDate() - 7)), // 7天前
+  new Date() // 今天
+])
 
 const addProject = () => {
   projects.value.push({
