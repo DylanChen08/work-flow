@@ -46,19 +46,51 @@ function createWindow() {
 electron.app.whenReady().then(() => {
   createWindow();
 });
-async function getGitCommits(projectPath, author, since) {
+async function getGitUsers(projectPath) {
+  try {
+    const { stdout } = await execAsync(
+      'git log --format="%an" | sort -u',
+      { cwd: projectPath }
+    );
+    return stdout.split("\n").filter(Boolean);
+  } catch (error) {
+    console.error("Failed to get git users:", error);
+    return [];
+  }
+}
+async function getGitCommits(projectPath, authors, since) {
+  authors.map((author) => `"${author}"`).join("|");
   const { stdout } = await execAsync(
-    `git log --since="${since}" --author="${author}" --pretty=format:"%s" --abbrev-commit`,
+    `git log --since="${since}" --pretty=format:"%an||%s" --abbrev-commit`,
     { cwd: projectPath }
   );
-  return stdout.split("\n").map((line) => line.replace(/^(feat|fix|refactor|style|perf|test|docs|chore|build|ci|revert|merge)(\([^)]*\))?:\s*/, "")).filter(Boolean);
+  return stdout.split("\n").filter((line) => {
+    const [author] = line.split("||");
+    return authors.includes(author);
+  }).map((line) => {
+    const [, message] = line.split("||");
+    return message.replace(/^(feat|fix|refactor|style|perf|test|docs|chore|build|ci|revert|merge)(\([^)]*\))?:\s*/, "");
+  }).filter(Boolean);
 }
-electron.ipcMain.handle("generate-report", async (event, config) => {
-  const { path: path2, startDate, endDate } = config;
+electron.ipcMain.handle("get-git-users", async (event, projectPath) => {
   try {
-    const author = await execAsync("git config user.name");
-    const commits = await getGitCommits(path2, author.stdout.trim(), startDate);
-    return { commits };
+    const users = await getGitUsers(projectPath);
+    return { users };
+  } catch (error) {
+    console.error(`Failed to get users for ${projectPath}:`, error);
+    return { users: [] };
+  }
+});
+electron.ipcMain.handle("generate-report", async (event, config) => {
+  const { path: path2, startDate, endDate, authors } = config;
+  try {
+    if (!path2 || !startDate || !endDate || !Array.isArray(authors)) {
+      console.error("Invalid parameters:", { path: path2, startDate, endDate, authors });
+      return { commits: [] };
+    }
+    const since = new Date(startDate).toISOString();
+    const commits = await getGitCommits(path2, authors, since);
+    return { commits: commits.map((commit) => String(commit)) };
   } catch (error) {
     console.error(`Failed to get commits for ${path2}:`, error);
     return { commits: [] };

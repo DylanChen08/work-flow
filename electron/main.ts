@@ -34,22 +34,59 @@ app.whenReady().then(() => {
   createWindow()
 })
 
-async function getGitCommits(projectPath: string, author: string, since: string) {
+async function getGitUsers(projectPath: string) {
+  try {
+    const { stdout } = await execAsync(
+      'git log --format="%an" | sort -u',
+      { cwd: projectPath }
+    )
+    return stdout.split('\n').filter(Boolean)
+  } catch (error) {
+    console.error('Failed to get git users:', error)
+    return []
+  }
+}
+
+async function getGitCommits(projectPath: string, authors: string[], since: string) {
+  const authorPattern = authors.map(author => `"${author}"`).join('|')
   const { stdout } = await execAsync(
-    `git log --since="${since}" --author="${author}" --pretty=format:"%s" --abbrev-commit`,
+    `git log --since="${since}" --pretty=format:"%an||%s" --abbrev-commit`,
     { cwd: projectPath }
   )
   return stdout.split('\n')
-    .map(line => line.replace(/^(feat|fix|refactor|style|perf|test|docs|chore|build|ci|revert|merge)(\([^)]*\))?:\s*/, ''))
+    .filter(line => {
+      const [author] = line.split('||')
+      return authors.includes(author)
+    })
+    .map(line => {
+      const [, message] = line.split('||')
+      return message.replace(/^(feat|fix|refactor|style|perf|test|docs|chore|build|ci|revert|merge)(\([^)]*\))?:\s*/, '')
+    })
     .filter(Boolean)
 }
 
-ipcMain.handle('generate-report', async (event, config) => {
-  const { path, startDate, endDate } = config
+ipcMain.handle('get-git-users', async (event, projectPath) => {
   try {
-    const author = await execAsync('git config user.name')
-    const commits = await getGitCommits(path, author.stdout.trim(), startDate)
-    return { commits }
+    const users = await getGitUsers(projectPath)
+    return { users }
+  } catch (error) {
+    console.error(`Failed to get users for ${projectPath}:`, error)
+    return { users: [] }
+  }
+})
+
+ipcMain.handle('generate-report', async (event, config) => {
+  const { path, startDate, endDate, authors } = config
+  try {
+    if (!path || !startDate || !endDate || !Array.isArray(authors)) {
+      console.error('Invalid parameters:', { path, startDate, endDate, authors })
+      return { commits: [] }
+    }
+
+    const since = new Date(startDate).toISOString()
+    const commits = await getGitCommits(path, authors, since)
+    
+    return { commits: commits.map(commit => String(commit)) }
   } catch (error) {
     console.error(`Failed to get commits for ${path}:`, error)
     return { commits: [] }

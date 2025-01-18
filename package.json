@@ -1,12 +1,32 @@
 {
   "name": "weekly-report-generator",
   "version": "1.0.0",
+  "description": "A tool for generating weekly reports from git commits",
+  "author": "Your Name",
   "main": "dist-electron/main.js",
   "scripts": {
     "dev": "vite",
     "start": "electron-vite dev",
-    "build": "vue-tsc && vite build && electron-builder",
+    "build": "vite build && electron-builder",
     "preview": "vite preview"
+  },
+  "build": {
+    "appId": "com.weekly-report.app",
+    "productName": "周报生成器",
+    "directories": {
+      "output": "release"
+    },
+    "win": {
+      "target": "portable"
+    },
+    "files": [
+      "dist/**/*",
+      "dist-electron/**/*"
+    ],
+    "electronDownload": {
+      "mirror": "https://npmmirror.com/mirrors/electron/"
+    },
+    "publish": null
   },
   "dependencies": {
     "vue": "^3.4.0",

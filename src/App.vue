@@ -21,6 +21,15 @@
             </template>
           </el-input>
           <el-input v-model="project.name" placeholder="项目名称" />
+          <el-select-v2
+            v-model="project.selectedUsers"
+            :options="project.users?.map(user => ({ value: user, label: user })) || []"
+            placeholder="选择用户"
+            style="width: 600px"
+            multiple
+            collapse-tags
+            collapse-tags-tooltip
+          />
           <el-button type="danger" @click="removeProject(index)" circle>
             <el-icon><Delete /></el-icon>
           </el-button>
@@ -67,7 +76,9 @@ const projects = ref<Project[]>([
   {
     path: '',
     name: '智联v1.1.0',
-    enabled: true
+    enabled: true,
+    selectedUsers: [],
+    users: []
   }
 ])
 
@@ -80,7 +91,9 @@ const addProject = () => {
   projects.value.push({
     path: '',
     name: '',
-    enabled: true
+    enabled: true,
+    selectedUsers: [],
+    users: []
   })
 }
 
@@ -88,15 +101,38 @@ const removeProject = (index: number) => {
   projects.value.splice(index, 1)
 }
 
-const getCommits = async (project: Project) => {
-  if (!project.enabled || !project.path) return []
+const updateGitUsers = async (index: number) => {
+  const project = projects.value[index]
+  if (!project.path) return
+
   try {
+    const { users } = await window.electronAPI.getGitUsers(project.path)
+    project.users = users
+    if (users.length > 0 && project.selectedUsers.length === 0) {
+      project.selectedUsers = [users[0]]
+    }
+  } catch (error) {
+    console.error('Failed to get git users:', error)
+    ElMessage.error('获取用户列表失败')
+  }
+}
+
+const getCommits = async (project: Project) => {
+  if (!project.enabled || !project.path || project.selectedUsers.length === 0) return []
+  try {
+    if (!dateRange.value?.[0] || !dateRange.value?.[1]) {
+      console.error('Invalid date range')
+      return []
+    }
+
     const response = await window.electronAPI.generateReport({
       path: project.path,
       startDate: dateRange.value[0].toISOString(),
-      endDate: dateRange.value[1].toISOString()
+      endDate: dateRange.value[1].toISOString(),
+      authors: project.selectedUsers.map(user => String(user))
     })
-    return response.commits || []
+
+    return Array.isArray(response.commits) ? response.commits.map(String) : []
   } catch (error) {
     console.error('Failed to get commits:', error)
     return []
@@ -104,28 +140,32 @@ const getCommits = async (project: Project) => {
 }
 
 const generateReportContent = async () => {
-  let content = '### 本周工作总结\n\n'
-  
-  for (const project of projects.value) {
-    content += `#### ${project.name}\n\n`
-    const commits = await getCommits(project)
-    if (commits.length > 0) {
-      commits.forEach((commit, index) => {
-        content += `${index + 1}. ${commit}\n`
-      })
-    } else {
-      content += '暂无提交记录\n'
+  try {
+    let content = '### 本周工作总结\n\n'
+    
+    for (const project of projects.value) {
+      content += `#### ${project.name}\n\n`
+      const commits = await getCommits(project)
+      if (commits.length > 0) {
+        commits.forEach((commit, index) => {
+          content += `${index + 1}. ${commit}\n`
+        })
+      } else {
+        content += '暂无提交记录\n'
+      }
+      content += '\n'
     }
-    content += '\n'
+    
+    content += `### 下周工作计划\n\n#### 智联\n\n1. 继续优化功能\n2. 处理测试反馈问题\n`
+    return content
+  } catch (error) {
+    console.error('Failed to generate report content:', error)
+    return '生成报告失败'
   }
-  
-  content += `### 下周工作计划\n\n#### 智联\n\n1. 继续优化功能\n2. 处理测试反馈问题\n`
-  return content
 }
 
 const previewContent = ref<string>('')
 
-// 添加更新预览的函数
 const updatePreview = async () => {
   try {
     const report = await generateReportContent()
@@ -136,12 +176,10 @@ const updatePreview = async () => {
   }
 }
 
-// 监听项目和日期变化
 watch([projects, dateRange], async () => {
   await updatePreview()
 }, { deep: true })
 
-// 初始更新
 onMounted(async () => {
   await updatePreview()
 })
@@ -165,7 +203,6 @@ const saveConfig = () => {
   localStorage.setItem('projects', JSON.stringify(projects.value))
 }
 
-// 添加调试日志
 console.log('electronAPI available:', window.electronAPI)
 
 const selectPath = async (index: number) => {
@@ -179,6 +216,7 @@ const selectPath = async (index: number) => {
     const path = await window.electronAPI.selectDirectory()
     if (path) {
       projects.value[index].path = path
+      await updateGitUsers(index)
       ElMessage.success('目录选择成功')
     }
   } catch (error) {

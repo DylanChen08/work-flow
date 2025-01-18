@@ -6,7 +6,8 @@ console.log('Preload script executing')
 contextBridge.exposeInMainWorld('electronAPI', {
   generateReport: (config: any) => ipcRenderer.invoke('generate-report', config),
   selectDirectory: () => ipcRenderer.invoke('dialog:openDirectory'),
-  saveReport: (data: any) => ipcRenderer.invoke('save-report', data)
+  saveReport: (data: any) => ipcRenderer.invoke('save-report', data),
+  getGitUsers: (projectPath: string) => ipcRenderer.invoke('get-git-users', projectPath)
 })
 
 // 添加调试日志
