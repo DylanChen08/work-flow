@@ -1,7 +1,7 @@
 <template>
   <el-container class="container">
     <el-header>
-      <h1>周报生成器</h1>
+      <h1>Work Flow</h1>
     </el-header>
     
     <el-main>
