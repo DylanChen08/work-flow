@@ -8,6 +8,15 @@ const execAsync = promisify(exec)
 
 let mainWindow: BrowserWindow | null = null
 
+// 确保 data 文件夹存在
+function ensureDataDirectory() {
+  const dataDir = path.join(process.cwd(), 'data')
+  if (!fs.existsSync(dataDir)) {
+    fs.mkdirSync(dataDir, { recursive: true })
+  }
+  return dataDir
+}
+
 function createWindow() {
   mainWindow = new BrowserWindow({
     width: 1200,
@@ -95,8 +104,10 @@ ipcMain.handle('generate-report', async (event, config) => {
 
 ipcMain.handle('save-report', async (event, { content, fileName }) => {
   try {
-    fs.writeFileSync(fileName, content)
-    return { success: true, fileName }
+    const dataDir = ensureDataDirectory()
+    const filePath = path.join(dataDir, fileName)
+    fs.writeFileSync(filePath, content, 'utf8')
+    return { success: true, fileName: filePath }
   } catch (error) {
     console.error('Failed to save report:', error)
     throw error

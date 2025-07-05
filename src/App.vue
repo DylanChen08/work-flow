@@ -23,7 +23,7 @@
           <el-input v-model="project.name" placeholder="项目名称" />
           <el-select-v2
             v-model="project.selectedUsers"
-            :options="project.users?.map(user => ({ value: user, label: user })) || []"
+            :options="project.users?.map((user: string) => ({ value: user, label: user })) || []"
             placeholder="选择用户"
             style="width: 600px"
             multiple
@@ -129,7 +129,7 @@ const getCommits = async (project: Project) => {
       path: project.path,
       startDate: dateRange.value[0].toISOString(),
       endDate: dateRange.value[1].toISOString(),
-      authors: project.selectedUsers.map(user => String(user))
+      authors: project.selectedUsers
     })
 
     return Array.isArray(response.commits) ? response.commits.map(String) : []

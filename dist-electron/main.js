@@ -24,6 +24,13 @@ const path__namespace = /* @__PURE__ */ _interopNamespaceDefault(path);
 const fs__namespace = /* @__PURE__ */ _interopNamespaceDefault(fs);
 const execAsync = util.promisify(child_process.exec);
 let mainWindow = null;
+function ensureDataDirectory() {
+  const dataDir = path__namespace.join(process.cwd(), "data");
+  if (!fs__namespace.existsSync(dataDir)) {
+    fs__namespace.mkdirSync(dataDir, { recursive: true });
+  }
+  return dataDir;
+}
 function createWindow() {
   mainWindow = new electron.BrowserWindow({
     width: 1200,
@@ -98,8 +105,10 @@ electron.ipcMain.handle("generate-report", async (event, config) => {
 });
 electron.ipcMain.handle("save-report", async (event, { content, fileName }) => {
   try {
-    fs__namespace.writeFileSync(fileName, content);
-    return { success: true, fileName };
+    const dataDir = ensureDataDirectory();
+    const filePath = path__namespace.join(dataDir, fileName);
+    fs__namespace.writeFileSync(filePath, content, "utf8");
+    return { success: true, fileName: filePath };
   } catch (error) {
     console.error("Failed to save report:", error);
     throw error;
