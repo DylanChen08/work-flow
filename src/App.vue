@@ -75,7 +75,7 @@ import { ElMessage } from 'element-plus'
 const projects = ref<Project[]>([
   {
     path: '',
-    name: '智联v1.1.0',
+    name: 'project - v1.1.0',
     enabled: true,
     selectedUsers: [],
     users: []
