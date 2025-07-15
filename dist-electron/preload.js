@@ -1,10 +1,1 @@
-"use strict";
-const electron = require("electron");
-console.log("Preload script executing");
-electron.contextBridge.exposeInMainWorld("electronAPI", {
-  generateReport: (config) => electron.ipcRenderer.invoke("generate-report", config),
-  selectDirectory: () => electron.ipcRenderer.invoke("dialog:openDirectory"),
-  saveReport: (data) => electron.ipcRenderer.invoke("save-report", data),
-  getGitUsers: (projectPath) => electron.ipcRenderer.invoke("get-git-users", projectPath)
-});
-console.log("electronAPI exposed");
+"use strict";const r=require("electron");console.log("Preload script executing");r.contextBridge.exposeInMainWorld("electronAPI",{generateReport:e=>r.ipcRenderer.invoke("generate-report",e),selectDirectory:()=>r.ipcRenderer.invoke("dialog:openDirectory"),saveReport:e=>r.ipcRenderer.invoke("save-report",e),getGitUsers:e=>r.ipcRenderer.invoke("get-git-users",e)});console.log("electronAPI exposed");

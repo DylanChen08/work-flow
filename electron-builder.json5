@@ -1,5 +1,6 @@
 {
   "appId": "com.weekly-report-generator",
+  "productName": "Work Flow",
   "asar": true,
   "directories": {
     "output": "release/${version}"
@@ -9,26 +10,45 @@
     "dist"
   ],
   "mac": {
-    "artifactName": "${productName}_${version}.${ext}",
+    "category": "public.app-category.productivity",
     "target": [
-      "dmg"
-    ]
+      {
+        "target": "dmg",
+        "arch": ["x64", "arm64"]
+      },
+      {
+        "target": "zip",
+        "arch": ["x64", "arm64"]
+      }
+    ],
+    "artifactName": "${productName}_${version}_${arch}.${ext}"
   },
   "win": {
     "target": [
       {
         "target": "nsis",
-        "arch": [
-          "x64"
-        ]
+        "arch": ["x64"]
+      },
+      {
+        "target": "portable",
+        "arch": ["x64"]
       }
     ],
-    "artifactName": "${productName}_${version}.${ext}"
+    "artifactName": "${productName}_${version}_${arch}.${ext}"
   },
   "nsis": {
     "oneClick": false,
     "perMachine": false,
     "allowToChangeInstallationDirectory": true,
-    "deleteAppDataOnUninstall": false
+    "deleteAppDataOnUninstall": false,
+    "createDesktopShortcut": true,
+    "createStartMenuShortcut": true
+  },
+  "dmg": {
+    "title": "${productName} ${version}",
+    "window": {
+      "width": 540,
+      "height": 380
+    }
   }
 } 

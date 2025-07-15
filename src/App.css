@@ -1,0 +1,27 @@
+.container {
+  height: 100vh;
+}
+
+.project-item {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 10px;
+  align-items: center;
+}
+
+.project-item .el-button {
+  flex-shrink: 0;
+}
+
+.project-item .el-button.is-circle {
+  border-radius: 50%;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+}
+
+.markdown-preview {
+  padding: 20px;
+  background: #f5f7fa;
+  border-radius: 4px;
+} 
