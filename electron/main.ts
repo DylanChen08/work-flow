@@ -45,11 +45,30 @@ app.whenReady().then(() => {
 
 async function getGitUsers(projectPath: string) {
   try {
-    const { stdout } = await execAsync(
+    console.log('Getting git users for path:', projectPath)
+    const { stdout, stderr } = await execAsync(
       'git log --format="%an" | sort -u',
-      { cwd: projectPath }
+      { cwd: projectPath, encoding: 'utf8' }
     )
-    return stdout.split('\n').filter(Boolean)
+    
+    console.log('Git users stdout:', stdout)
+    console.log('Git users stderr:', stderr)
+    
+    // 确保stdout是字符串类型并清理数据
+    const output = String(stdout || '')
+    const users = output.split('\n')
+      .map(line => {
+        try {
+          return String(line || '').trim()
+        } catch (error) {
+          console.error('Error processing user line:', error, line)
+          return ''
+        }
+      })
+      .filter(Boolean)
+    
+    console.log('Processed users:', users)
+    return users
   } catch (error) {
     console.error('Failed to get git users:', error)
     return []
@@ -57,27 +76,68 @@ async function getGitUsers(projectPath: string) {
 }
 
 async function getGitCommits(projectPath: string, authors: string[], since: string) {
-  const authorPattern = authors.map(author => `"${author}"`).join('|')
-  const { stdout } = await execAsync(
-    `git log --since="${since}" --pretty=format:"%an||%s" --abbrev-commit`,
-    { cwd: projectPath }
-  )
-  return stdout.split('\n')
-    .filter(line => {
-      const [author] = line.split('||')
-      return authors.includes(author)
-    })
-    .map(line => {
-      const [, message] = line.split('||')
-      return message.replace(/^(feat|fix|refactor|style|perf|test|docs|chore|build|ci|revert|merge)(\([^)]*\))?:\s*/, '')
-    })
-    .filter(Boolean)
+  try {
+    console.log('Getting git commits for path:', projectPath, 'authors:', authors, 'since:', since)
+    const { stdout, stderr } = await execAsync(
+      `git log --since="${since}" --pretty=format:"%an||%s" --abbrev-commit`,
+      { cwd: projectPath, encoding: 'utf8' }
+    )
+    
+    console.log('Git commits stdout:', stdout)
+    console.log('Git commits stderr:', stderr)
+    
+    // 确保stdout是字符串类型
+    const output = String(stdout || '')
+    
+    const commits = output.split('\n')
+      .filter(line => {
+        if (!line || typeof line !== 'string') return false
+        const parts = line.split('||')
+        if (parts.length < 2) return false
+        const [author] = parts
+        return authors.includes(author)
+      })
+      .map(line => {
+        try {
+          const parts = line.split('||')
+          if (parts.length < 2) return ''
+          const [, message] = parts
+          // 确保message是字符串并清理
+          const cleanMessage = String(message || '').replace(/^(feat|fix|refactor|style|perf|test|docs|chore|build|ci|revert|merge)(\([^)]*\))?:\s*/, '')
+          return cleanMessage.trim()
+        } catch (error) {
+          console.error('Error processing commit line:', error, line)
+          return ''
+        }
+      })
+      .filter(Boolean)
+    
+    console.log('Processed commits:', commits)
+    return commits
+  } catch (error) {
+    console.error('Error in getGitCommits:', error)
+    return []
+  }
 }
 
 ipcMain.handle('get-git-users', async (event, projectPath) => {
   try {
+    console.log('IPC: get-git-users called with path:', projectPath)
     const users = await getGitUsers(projectPath)
-    return { users }
+    console.log('IPC: getGitUsers returned:', users)
+    
+    // 确保所有用户都是字符串类型
+    const safeUsers = users.map(user => {
+      try {
+        return String(user || '').trim()
+      } catch (error) {
+        console.error('Error converting user to string:', error)
+        return ''
+      }
+    }).filter(Boolean)
+    
+    console.log('IPC: returning safe users:', safeUsers)
+    return { users: safeUsers }
   } catch (error) {
     console.error(`Failed to get users for ${projectPath}:`, error)
     return { users: [] }
@@ -87,15 +147,30 @@ ipcMain.handle('get-git-users', async (event, projectPath) => {
 ipcMain.handle('generate-report', async (event, config) => {
   const { path, startDate, endDate, authors } = config
   try {
+    console.log('IPC: generate-report called with config:', config)
+    
     if (!path || !startDate || !endDate || !Array.isArray(authors)) {
       console.error('Invalid parameters:', { path, startDate, endDate, authors })
       return { commits: [] }
     }
 
     const since = new Date(startDate).toISOString()
+    console.log('IPC: calling getGitCommits with since:', since)
     const commits = await getGitCommits(path, authors, since)
+    console.log('IPC: getGitCommits returned:', commits)
     
-    return { commits: commits.map(commit => String(commit)) }
+    // 确保所有commit都是字符串类型
+    const safeCommits = commits.map(commit => {
+      try {
+        return String(commit || '').trim()
+      } catch (error) {
+        console.error('Error converting commit to string:', error)
+        return ''
+      }
+    }).filter(Boolean)
+    
+    console.log('IPC: returning safe commits:', safeCommits)
+    return { commits: safeCommits }
   } catch (error) {
     console.error(`Failed to get commits for ${path}:`, error)
     return { commits: [] }

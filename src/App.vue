@@ -125,12 +125,23 @@ const getCommits = async (project: Project) => {
       return []
     }
 
-    const response = await window.electronAPI.generateReport({
-      path: project.path,
-      startDate: dateRange.value[0].toISOString(),
-      endDate: dateRange.value[1].toISOString(),
-      authors: project.selectedUsers
-    })
+    // 强制转换为纯字符串
+    const startDate = new Date(dateRange.value[0]).toISOString()
+    const endDate = new Date(dateRange.value[1]).toISOString()
+    const authors = project.selectedUsers.map(u => String(u))
+    const path = String(project.path)
+
+    // 关键：深拷贝为纯 JSON 数据
+    const payload = JSON.parse(JSON.stringify({
+      path,
+      startDate,
+      endDate,
+      authors
+    }))
+
+    console.log('generateReport payload:', payload)
+
+    const response = await window.electronAPI.generateReport(payload)
 
     return Array.isArray(response.commits) ? response.commits.map(String) : []
   } catch (error) {
@@ -213,9 +224,9 @@ const selectPath = async (index: number) => {
       ElMessage.error('Electron API not available')
       return
     }
-    const path = await window.electronAPI.selectDirectory()
-    if (path) {
-      projects.value[index].path = path
+    const selectedPath = await window.electronAPI.selectDirectory()
+    if (selectedPath) {
+      projects.value[index].path = selectedPath
       await updateGitUsers(index)
       ElMessage.success('目录选择成功')
     }

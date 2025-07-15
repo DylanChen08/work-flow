@@ -55,34 +55,79 @@ electron.app.whenReady().then(() => {
 });
 async function getGitUsers(projectPath) {
   try {
-    const { stdout } = await execAsync(
+    console.log("Getting git users for path:", projectPath);
+    const { stdout, stderr } = await execAsync(
       'git log --format="%an" | sort -u',
-      { cwd: projectPath }
+      { cwd: projectPath, encoding: "utf8" }
     );
-    return stdout.split("\n").filter(Boolean);
+    console.log("Git users stdout:", stdout);
+    console.log("Git users stderr:", stderr);
+    const output = String(stdout || "");
+    const users = output.split("\n").map((line) => {
+      try {
+        return String(line || "").trim();
+      } catch (error) {
+        console.error("Error processing user line:", error, line);
+        return "";
+      }
+    }).filter(Boolean);
+    console.log("Processed users:", users);
+    return users;
   } catch (error) {
     console.error("Failed to get git users:", error);
     return [];
   }
 }
 async function getGitCommits(projectPath, authors, since) {
-  authors.map((author) => `"${author}"`).join("|");
-  const { stdout } = await execAsync(
-    `git log --since="${since}" --pretty=format:"%an||%s" --abbrev-commit`,
-    { cwd: projectPath }
-  );
-  return stdout.split("\n").filter((line) => {
-    const [author] = line.split("||");
-    return authors.includes(author);
-  }).map((line) => {
-    const [, message] = line.split("||");
-    return message.replace(/^(feat|fix|refactor|style|perf|test|docs|chore|build|ci|revert|merge)(\([^)]*\))?:\s*/, "");
-  }).filter(Boolean);
+  try {
+    console.log("Getting git commits for path:", projectPath, "authors:", authors, "since:", since);
+    const { stdout, stderr } = await execAsync(
+      `git log --since="${since}" --pretty=format:"%an||%s" --abbrev-commit`,
+      { cwd: projectPath, encoding: "utf8" }
+    );
+    console.log("Git commits stdout:", stdout);
+    console.log("Git commits stderr:", stderr);
+    const output = String(stdout || "");
+    const commits = output.split("\n").filter((line) => {
+      if (!line || typeof line !== "string") return false;
+      const parts = line.split("||");
+      if (parts.length < 2) return false;
+      const [author] = parts;
+      return authors.includes(author);
+    }).map((line) => {
+      try {
+        const parts = line.split("||");
+        if (parts.length < 2) return "";
+        const [, message] = parts;
+        const cleanMessage = String(message || "").replace(/^(feat|fix|refactor|style|perf|test|docs|chore|build|ci|revert|merge)(\([^)]*\))?:\s*/, "");
+        return cleanMessage.trim();
+      } catch (error) {
+        console.error("Error processing commit line:", error, line);
+        return "";
+      }
+    }).filter(Boolean);
+    console.log("Processed commits:", commits);
+    return commits;
+  } catch (error) {
+    console.error("Error in getGitCommits:", error);
+    return [];
+  }
 }
 electron.ipcMain.handle("get-git-users", async (event, projectPath) => {
   try {
+    console.log("IPC: get-git-users called with path:", projectPath);
     const users = await getGitUsers(projectPath);
-    return { users };
+    console.log("IPC: getGitUsers returned:", users);
+    const safeUsers = users.map((user) => {
+      try {
+        return String(user || "").trim();
+      } catch (error) {
+        console.error("Error converting user to string:", error);
+        return "";
+      }
+    }).filter(Boolean);
+    console.log("IPC: returning safe users:", safeUsers);
+    return { users: safeUsers };
   } catch (error) {
     console.error(`Failed to get users for ${projectPath}:`, error);
     return { users: [] };
@@ -91,13 +136,25 @@ electron.ipcMain.handle("get-git-users", async (event, projectPath) => {
 electron.ipcMain.handle("generate-report", async (event, config) => {
   const { path: path2, startDate, endDate, authors } = config;
   try {
+    console.log("IPC: generate-report called with config:", config);
     if (!path2 || !startDate || !endDate || !Array.isArray(authors)) {
       console.error("Invalid parameters:", { path: path2, startDate, endDate, authors });
       return { commits: [] };
     }
     const since = new Date(startDate).toISOString();
+    console.log("IPC: calling getGitCommits with since:", since);
     const commits = await getGitCommits(path2, authors, since);
-    return { commits: commits.map((commit) => String(commit)) };
+    console.log("IPC: getGitCommits returned:", commits);
+    const safeCommits = commits.map((commit) => {
+      try {
+        return String(commit || "").trim();
+      } catch (error) {
+        console.error("Error converting commit to string:", error);
+        return "";
+      }
+    }).filter(Boolean);
+    console.log("IPC: returning safe commits:", safeCommits);
+    return { commits: safeCommits };
   } catch (error) {
     console.error(`Failed to get commits for ${path2}:`, error);
     return { commits: [] };
